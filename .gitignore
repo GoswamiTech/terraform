@@ -20,8 +20,5 @@ website/node_modules
 
 /terraform
 
-website/vendor
-vendor/
-
 # Coverage
 coverage.txt
