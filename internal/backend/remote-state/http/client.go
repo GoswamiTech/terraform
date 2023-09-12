@@ -13,8 +13,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 
-	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/terraform/internal/states/remote"
 	"github.com/hashicorp/terraform/internal/states/statemgr"
 )
@@ -83,6 +83,7 @@ func (c *httpClient) Lock(info *statemgr.LockInfo) (string, error) {
 	}
 	c.lockID = ""
 
+	c.resolveLockAddess(info.ID)
 	jsonLockInfo := info.Marshal()
 	resp, err := c.httpRequest(c.LockMethod, c.LockURL, &jsonLockInfo, "lock")
 	if err != nil {
@@ -125,11 +126,26 @@ func (c *httpClient) Lock(info *statemgr.LockInfo) (string, error) {
 	}
 }
 
+func (c *httpClient) resolveLockAddess(id string) error {
+	if c.LockURL == nil {
+		return nil
+	}
+	c.LockURL.Path = strings.Replace(c.LockURL.Path, "{id}", id, -1)
+}
+
+func (c *httpClient) resolveUnlockAddess(id string) error {
+	if c.LockURL == nil {
+		return nil
+	}
+	c.UnlockURL.Path = strings.Replace(c.UnlockURL.Path, "{id}", id, -1)
+}
+
 func (c *httpClient) Unlock(id string) error {
 	if c.UnlockURL == nil {
 		return nil
 	}
 
+	c.resolveUnlockAddess(id)
 	resp, err := c.httpRequest(c.UnlockMethod, c.UnlockURL, &c.jsonLockInfo, "unlock")
 	if err != nil {
 		return err
