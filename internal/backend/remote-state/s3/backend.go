@@ -32,6 +32,13 @@ func New() backend.Backend {
 	return &Backend{}
 }
 
+type LockType string
+
+var (
+	DBtype     = LockType("DB")
+	BucketType = LockType("BUCKET")
+)
+
 type Backend struct {
 	awsConfig aws.Config
 	s3Client  *s3.Client
@@ -45,6 +52,8 @@ type Backend struct {
 	kmsKeyID              string
 	ddbTable              string
 	workspaceKeyPrefix    string
+	lockType              LockType
+	lockName              string
 }
 
 // ConfigSchema returns a description of the expected configuration
@@ -55,6 +64,16 @@ func (b *Backend) ConfigSchema() *configschema.Block {
 			"bucket": {
 				Type:        cty.String,
 				Required:    true,
+				Description: "The name of the S3 bucket",
+			},
+			"lock_name": {
+				Type:        cty.String,
+				Optional:    true,
+				Description: "the name of lock file into s3 Bucket",
+			},
+			"lock_type": {
+				Type:        cty.String,
+				Optional:    true,
 				Description: "The name of the S3 bucket",
 			},
 			"key": {
@@ -629,7 +648,8 @@ func (b *Backend) Configure(obj cty.Value) tfdiags.Diagnostics {
 			return diags
 		}
 	}
-
+	b.lockType = LockType(stringAttr(obj, "lock_type"))
+	b.lockName = stringAttr(obj, "lock_name")
 	b.bucketName = stringAttr(obj, "bucket")
 	b.keyName = stringAttr(obj, "key")
 
